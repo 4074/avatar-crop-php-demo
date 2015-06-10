@@ -1,0 +1,171 @@
+<!doctype html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <title>Avatar Crop Demo</title>
+    <link rel="stylesheet" type="text/css" href="/js/jcrop/css/jquery.Jcrop.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+        }
+        
+        img {
+            border: 0;
+            display: block;
+        }
+        
+        button {
+            padding: 4px 8px;
+        }
+        p {
+            line-height: 1.6;
+        }
+        .container {
+            width: 800px;
+            margin: 40px auto;
+        }
+        
+        #img-source {
+            width: 460px;
+        }
+        #preview-pane, #view-result {
+            margin: 20px 0;
+            float: left;
+            
+        }
+        #view-result {
+            margin-left: 40px;
+        }
+        #preview-box {
+            width: 125px;
+            height: 125px;
+            overflow: hidden;
+        }
+        .clearfix {
+            overflow: hidden;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="wrap">
+            <p>原图</p>
+            <div>
+                <img src="image/1.png" id="img-source">
+            </div>
+            
+            <div class="clearfix">
+                <div id="preview-pane">
+                    <p>预览</p>
+                    <div id="preview-box">
+                        <img src="image/1.png">
+                    </div>
+                </div>
+
+
+                <div id="view-result">
+                    <p>结果 <span id="result-path"></span></p>
+                    <img>
+                </div>
+            </div>
+            
+            
+            <button id="btn-save">保存</button>
+        </div>
+    </div>
+    <script src="/js/jquery.min.js"></script>
+    <script src="/js/jcrop/js/jquery.Jcrop.min.js"></script>
+    <script>
+
+        var Url = {
+            save: 'php/main.php'
+        }
+
+        var boundx, boundy, position,
+            
+            $img_source = $("#img-source"),
+            $img_result = $('#view-result img'),
+            $save = $("#btn-save"),
+            $result_path = $('#result-path')
+            
+            $pcnt = $("#preview-pane #preview-box"),
+            $pimg = $pcnt.find('img'),
+            
+            xsize = $pcnt.width(),
+            ysize = $pcnt.height()
+
+        var source = $img_source.attr('src'),
+            avatar_width = 125,
+            avatar_height = 125,
+            ratio = 1
+
+        // 绑定保存按钮
+        $save.click(function () {
+            
+            $save.attr("disabled", "disabled").html("保存中..")
+            
+            if(!source || !position) return;
+            
+            // 获取原图缩放的比例，对提取片段的坐标进行修正
+            ratio = $img_source[0].width / $img_source.width()
+            
+            $.each("x y x2 y2".split(" "), function (key, val) {
+                position[val] = parseInt(position[val] * ratio)
+            })
+            position.w = avatar_width
+            position.h = avatar_height
+            
+            submitSave({
+                source: source,
+                position: position
+            }, function (rs) {
+                
+                $save.removeAttr("disabled").html("保存")
+                200 == rs.code ?
+                    ($img_result.attr('src', rs.data.path), $result_path.html(rs.data.path)) 
+                    : alert(rs.msg)
+            })
+        })
+
+        // 调用Jcrop
+        $img_source.Jcrop({
+            onChange: updatePreview,
+            onSelect: updatePreview,
+            aspectRatio: 1,
+            minSize: [50, 50],
+            setSelect: [0, 0, 125, 125],
+            bgColor: "#fff"
+        }, function () {
+            var bounds = this.getBounds();
+            boundx = bounds[0], boundy = bounds[1]
+        })
+
+        // 保存
+        function submitSave(data, cb){
+            $.post(Url.save, {
+                data: data
+            }, cb, 'json')
+        }
+        
+        // 更新预览
+        function updatePreview(c) {
+            position = c
+            if (parseInt(c.w) > 0) {
+                var rx = xsize / c.w;
+                var ry = ysize / c.h;
+
+                $pimg.css({
+                    width: Math.round(rx * boundx) + 'px',
+                    height: Math.round(ry * boundy) + 'px',
+                    marginLeft: '-' + Math.round(rx * c.x) + 'px',
+                    marginTop: '-' + Math.round(ry * c.y) + 'px'
+                });
+            }
+        };
+    </script>
+</body>
+
+</html>
